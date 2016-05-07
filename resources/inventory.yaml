@@ -1,0 +1,55 @@
+laser:
+  name: Laser Cannon
+  desc: A standard high-efficiency laser weapon.
+  mass: 200
+  space: 5
+  value: 1000
+tractor:
+  name: Tractor Beam
+  desc: A collimated graviton beam.
+  mass: 400
+  space: 7
+  value: 3000
+plasma:
+  name: Plasma Cannon
+  desc: Short-range, but powerful against shields.
+  mass: 200
+  space: 5
+  value: 1000
+railgun:
+  name: Railgun
+  desc: Cheap, effective, but requires hauling ammo around.
+  mass: 100
+  space: 5
+  value: 500
+railgun-ammo:
+  name: Railgun Ammo
+  desc:
+  mass: 100
+  space: 2
+  quantity: 300
+charge-pod:
+  name: Charge Pod
+  desc: Increases energy capacity.
+  mass: 100
+  space: 3
+  value: 2000
+shield-cap:
+  name: Shield Capacitor
+  desc: A rechargable capacitor tied directly into the shield grid. Enables faster shield recharging.
+  mass: 100
+  space: 2
+  value: 2000
+escape-pod:
+  name: Escape Pod
+  desc: Provides life support for up to 10 days. Emergency beacon activates automatically on deployment.
+  mass: 20
+  space: 10
+  value: 3000
+
+# thing:
+#   name:
+#   desc:
+#   mass:
+#   space:
+#   value:

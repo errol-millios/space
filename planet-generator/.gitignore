@@ -1,0 +1,9 @@
+*.bmp
+/planet
+*.o
+final-images/
+high-quality/
+selected/
+selection/
+small-images/
+source-images/
