@@ -18,17 +18,32 @@ class Mobile:
     def __init__(self, sprite = None):
         self.sprite = sprite if sprite is not None else defaultSprite()
         self.lifetime = None
-        self.thrust = 10000
-        self.turnRate = 100
+        self.maxhp = 100
+        self.hp = 100
+        self.originalMass = 1
         self.mass = 1
         self.hitRadius = 0
         self.incomingCollision = None
         self.parent = None
+        self.targeted = False
+        self.annotation = None
+        self.fluff = False
+        self.ore = {
+            'iron-ore': 0.01,
+            'water': 0.05
+        }
+
+    def step(self):
+        pass
+
+    def serialize(self):
+        return None
+
+class ActiveMobile(Mobile):
+    def __init__(self, sprite = None):
+        Mobile.__init__(self, sprite)
         self.shieldCapacity = 200
         self.shieldCharge = 200
-        self.hullCapacity = 100
-        self.hullIntegrity = 100
-
         self.energy = 100
         self.energyCapacity = 100
         self.energyProductionRate = 5
@@ -36,7 +51,8 @@ class Mobile:
         self.shieldLoss = 0.1
         self.maxShieldEnergyUsageRate = 1.1
         self.target = None
-        self.targeted = False
+        self.thrust = 10000
+        self.turnRate = 100
 
     def step(self):
         if self.lifetime is not None:
@@ -54,9 +70,6 @@ class Mobile:
             self.energy = 0
         self.energy = min(self.energy, self.energyCapacity)
 
-    def serialize(self):
-        return None
-
 class Debris(Mobile):
     def __init__(self):
         sprite = pygame.Surface((10, 10)).convert_alpha()
@@ -65,10 +78,6 @@ class Debris(Mobile):
         pygame.draw.polygon(sprite, (128, 128, 128), points)
         Mobile.__init__(self, sprite)
         self.lifetime = 1000
-        self.shieldCapacity = 0
-        self.shieldCharge = 0
-        self.hullCapacity = 0
-        self.hullIntegrity = 0
-        self.energy = 0
-        self.energyCapacity = 0
-        self.energyProductionRate = 0
+        self.hp = 0
+        self.maxhp = 0
+        self.fluff = True

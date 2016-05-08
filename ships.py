@@ -1,16 +1,10 @@
 import pygame
 import weapons
 import random
-from mobile import Mobile
+import mobiles
 import yaml
-
 import shipgenerator
-
-try:
-    from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-    print 'libyaml not installed?'
-    from yaml import Loader, Dumper
+import inventory
 
 generatedSprites = {}
 
@@ -41,9 +35,9 @@ def shipSprite(spriteDef, color):
     return loadGeneratedSprite(name, color, size, rotation)
 
 
-class Ship(Mobile):
+class Ship(mobiles.ActiveMobile):
     def __init__(self, name, data):
-        Mobile.__init__(self)
+        mobiles.ActiveMobile.__init__(self)
         self.name = name
         self.weapons = []
         self.inventory = {}
@@ -68,6 +62,19 @@ class Ship(Mobile):
 
     def serialize(self):
         return self.name
+
+    def addInventory(self, things):
+        catalog = inventory.Catalog()
+        for thing, qty in things:
+            if thing in self.inventory:
+                self.inventory[thing] = (self.inventory[thing][0], self.inventory[thing][1] + qty)
+            else:
+                self.inventory[thing] = (catalog.get(thing), qty)
+
+    def briefInventory(self):
+        if len(self.inventory) < 1:
+            return [(0, None, 'Nothing.')]
+        return [(0, None, '%s: %s' % (info[0]['name'], info[1])) for info in self.inventory.values()]
 
 _ships = None
 with open('resources/ships.yaml', 'r') as file:

@@ -1,38 +1,40 @@
-zerozeroone:
-  name: 'Sector 001'
-  pos: [0, 0]
-  planets:
-    - name: Lucky Strike
-      sprite: boreal
-      r: 120
-      pos: [7000, 7000]
-    - name: "God's Acre"
-      sprite: grassland
-      r: 110
-      pos: [1000, -10000]
-    - name: We Made It
-      sprite: forest
-      r: 110
-      pos: [-5000, -7000]
-    - name: Last Chance
-      sprite: hardscrabble
-      r: 110
-      pos: [-6000, 2000]
-    - name: New Hope
-      sprite: ocean-2
-      r: 110
-      pos: [0, 0]
-pelagos:
-  name: "the Pelagos System"
-  pos: [5, 3]
-  planets:
-    - name: Pelagos IV
-      desc: "The crown jewel of the Pelagos system, Pelagos IV boasts thousands of miles of golden beaches and crystal ocean waters, unpolluted by even the tiniest single-celled organism... at least until the Tourism Board set up shop. The total absence of local flora and fauna has made this an ideal platform for the perfectly controlled tourist destination. Only the occasional sandstorm blowing out from the deep deserts of one of the two major landmasses disturbs the peace here."
-      extra: "Invasive life forms..."
-      sprite: archipelago-1
-      seed: 1866247832
-      r: 140
-      pos: [100, -300]
+scale: 40000
+sectors:
+  zerozeroone:
+    name: 'Sector 001'
+    pos: [0, 0]
+    planets:
+      - name: Lucky Strike
+        sprite: boreal
+        r: 120
+        pos: [7000, 7000]
+      - name: "God's Acre"
+        sprite: grassland
+        r: 110
+        pos: [1000, -10000]
+      - name: We Made It
+        sprite: forest
+        r: 110
+        pos: [-5000, -7000]
+      - name: Last Chance
+        sprite: hardscrabble
+        r: 110
+        pos: [-6000, 2000]
+      - name: New Hope
+        sprite: ocean-2
+        r: 110
+        pos: [0, 0]
+  pelagos:
+    name: "the Pelagos System"
+    pos: [5, 3]
+    planets:
+      - name: Pelagos IV
+        desc: "The crown jewel of the Pelagos system, Pelagos IV boasts thousands of miles of golden beaches and crystal ocean waters, unpolluted by even the tiniest single-celled organism... at least until the Tourism Board set up shop. The total absence of local flora and fauna has made this an ideal platform for the perfectly controlled tourist destination. Only the occasional sandstorm blowing out from the deep deserts of one of the two major landmasses disturbs the peace here."
+        extra: "Invasive life forms..."
+        sprite: archipelago-1
+        seed: 1866247832
+        r: 140
+        pos: [100, -300]
 
 
 # [96, 96, 192]

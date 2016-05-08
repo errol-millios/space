@@ -1,8 +1,7 @@
 import pygame
 import copy
-
-from mobile import Mobile
-
+import yaml
+import mobiles
 import inventory
 
 class Weapon:
@@ -23,30 +22,29 @@ class Weapon:
         self.firing = False
 
     def projectile(self):
-        return Mobile(self.sprite)
+        return mobiles.Mobile(self.sprite)
 
-instances = None
 
-def make():
-    instances = {}
+_weapons = None
+with open('resources/weapons.yaml', 'r') as file:
+    _weapons = yaml.load(file.read())
 
-    catalog = inventory.Catalog()
+def generateWeaponSprite(size, color):
+    sprite = pygame.Surface(size).convert_alpha()
+    sprite.fill(color)
+    return sprite
 
-    instances['laser'] = Weapon(catalog.get('laser', 'name'), catalog.get('laser', 'desc'), 'beam', None, (255, 0, 0, 192), None, 1000, 5, 4)
-
-    instances['tractor'] = Weapon(catalog.get('tractor', 'name'), catalog.get('tractor', 'desc'), 'target-beam', None, (0, 255, 0, 192), None, 1000, 5, 4)
-
-    sprite = pygame.Surface((10, 2)).convert_alpha()
-    sprite.fill((0, 128, 255, 192))
-    instances['plasma'] = Weapon(catalog.get('plasma', 'name'), catalog.get('plasma', 'desc'), 'projectile', sprite, None, 3, 20, 10, 20)
-
-    sprite = pygame.Surface((2, 2)).convert_alpha()
-    sprite.fill((192, 192, 192, 255))
-    instances['railgun'] = Weapon(catalog.get('railgun', 'name'), catalog.get('railgun', 'desc'), 'projectile', sprite, None, 3, 1000, 7, 10)
-    return instances
-
+catalog = inventory.Catalog()
 def get(name):
-    global instances
-    if instances is None:
-        instances = make()
-    return copy.copy(instances[name])
+    parameters = [
+        catalog.get(name, 'name'),
+        catalog.get(name, 'desc'),
+        _weapons[name]['type'],
+        generateWeaponSprite(*_weapons[name]['sprite']) if 'sprite' in _weapons[name] else None,
+        _weapons[name]['color'] if 'color' in _weapons[name] else None,
+        _weapons[name]['interval'] if 'interval' in _weapons[name] else None,
+        _weapons[name]['lifetime'] if 'lifetime' in _weapons[name] else None,
+        _weapons[name]['spread'],
+        _weapons[name]['energy']
+    ]
+    return Weapon(*parameters)

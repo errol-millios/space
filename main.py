@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 import numpy as np
 import numpy.linalg as LA
-import scipy.misc as misc
 import math
 
 from random import random, randint
@@ -10,11 +9,12 @@ import copy
 import os
 import sys
 
+import os
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0, 0)
+
 import pygame as pg
 from pygame.locals import *
 from pygame.compat import geterror
-
-import cPickle as pickle
 
 if not pg.font: print ('Warning, fonts disabled')
 if not pg.mixer: print ('Warning, sound disabled')
@@ -22,7 +22,7 @@ if not pg.mixer: print ('Warning, sound disabled')
 
 import weapons
 import ships
-from mobile import Mobile, Debris
+from mobiles import Mobile, Debris
 import inventory
 import menu
 import ai
@@ -31,6 +31,9 @@ from physics import PhysicalObjects, FixedPhysicalObjects
 import sectors
 
 from shipgenerator import vec
+import storage
+import stats
+import asteroids
 
 """
 
@@ -146,18 +149,21 @@ def mkEvent(type, arguments = []):
 class StatusBar:
     def __init__(self):
         self.topText = 'All systems nominal.'
-        self.bottomText = 'Cool.'
+        self.bottomText = None
         self.messageTime = 0
         self.font = pg.font.Font(None, 16)
+        self.history = []
 
     def notify(self, message, duration = 30):
         self.bottomText = message
         self.messageTime = 30
 
     def step(self, tick):
-        self.messageTime -= 1
-        if self.messageTime < 0:
-            self.bottomText = None
+        if self.messageTime > 0:
+            self.messageTime -= 1
+            if self.messageTime < 1:
+                self.history.append(self.bottomText)
+                self.bottomText = None
 
     def render(self, surface):
         if self.topText is not None:
@@ -186,10 +192,11 @@ class UI:
         self.isFiring = False
 
         self.playerWeapons = [
-            [weapons.get('railgun')],
+            [weapons.get('railgun'), weapons.get('railgun'), weapons.get('railgun'), weapons.get('railgun'), weapons.get('railgun'), weapons.get('railgun'), weapons.get('railgun'), weapons.get('railgun')],
             [weapons.get('plasma')],
             [weapons.get('laser')],
-            [weapons.get('tractor')]
+            [weapons.get('tractor')],
+            [weapons.get('mining-laser')]
         ]
 
         self.weaponIndex = 0
@@ -265,6 +272,8 @@ class UI:
                 self.game.spawnRandomShips()
             elif event.key == pg.K_n:
                 self.game.spawnNearbyShip()
+            elif event.key == pg.K_a:
+                self.game.spawnAsteroids()
             elif event.key == pg.K_w:
                 if self.game.currentSector == 'zerozeroone':
                     self.game.currentSector = 'pelagos'
@@ -401,7 +410,7 @@ class Game:
         self.objects = PhysicalObjects(1, Mobile)
         self.objects.theta = (np.random.random(self.objects.cardinality) - 0.5) * 360
 
-        self.objects.p[0] = (-10000, -10000) # (np.random.random(2) - 0.5) * 200
+        self.objects.p[0] = (np.random.random(2) - 0.5) * 200
         self.objects.dp[0] = (0, 0)
         self.objects.gamestate[0] = ships.get('fighter')
 
@@ -473,6 +482,7 @@ class Game:
 
         if self.enableFriction:
             self.objects.dp *= 0.9
+            self.objects.dtheta *= 0.9
 
         if self.enableSpeedLimit:
             for i in xrange(self.objects.cardinality):
@@ -504,9 +514,10 @@ class Game:
         elif y < smin:
             oy = -1
 
-        offset = np.array((ox, oy))
-        self.loadSector(sectors.getByPosition(self.currentSector.pos + offset))
-        self.objects.p[0] -= offset * sectors.scale * 2
+        if ox != 0 or oy != 0:
+            offset = np.array((ox, oy))
+            self.loadSector(sectors.getByPosition(self.currentSector.pos + offset))
+            self.objects.p[0] -= offset * sectors.scale * 2
 
         if verbose > 2:
             KE = 0.5 * np.sum(np.prod(self.objects.dp, axis=0))
@@ -522,6 +533,26 @@ class Game:
 
         # self.puters.append(ai.FollowTarget(self.getMobileController(index), self.objects.ref(0))) # randint(0, self.objects.cardinality - 1))))
 
+    def makeAsteroid(self):
+        m = asteroids.get()
+        m.hitRadius = 0.5 * min(m.sprite.get_height(), m.sprite.get_width())
+        print m.sprite.get_size(), m.hitRadius
+        m.originalMass = 1000
+        m.mass = 1000
+        return m
+
+    def spawnAsteroids(self):
+        n = 10
+
+        first = self.objects.add(n, lambda: self.makeAsteroid())
+        last = first + n
+
+        r = (np.random.random((n, 2)) - 0.5)
+        r *= 1000 / LA.norm(r)
+
+        self.objects.p[first:last] = self.objects.p[0] + r
+        self.objects.dp[first:last] = 5 * (np.random.random((n, 2)) - 0.5)
+        self.objects.dtheta[first:last] = 10 * (np.random.random((n,)) - 0.5)
 
     def spawnRandomShips(self):
         if self.fixedObjects.cardinality < 1:
@@ -563,6 +594,8 @@ class Game:
         for projectileIndex, targetIndex in np.transpose((d2 < maxHitRadius).nonzero()):
             if not self.objects.canCollide[targetIndex]:
                 r2 = self.objects.gamestate[targetIndex].hitRadius
+                if r2 < 1:
+                    continue
                 r2 *= r2
                 if d2[projectileIndex, targetIndex] > r2:
                     continue
@@ -572,7 +605,7 @@ class Game:
                     continue
                 if verbose > 2:
                     print 'naive collision of projectile %d (%d) with target %d' % (projectileIndex, projectileIndexMap[projectileIndex], targetIndex)
-                self.objects.gamestate[targetIndex].incomingCollision = projectileIndexMap[projectileIndex]
+                self.objects.gamestate[targetIndex].incomingCollision = self.objects.ref(projectileIndexMap[projectileIndex])
 
     def renderMinimap(self, vp):
         minimapSize = 200
@@ -627,6 +660,18 @@ class Game:
         pg.draw.rect(minimap, (0, 128, 0), Rect(0, 0, w, h), 1)
         return (0, 0), minimap
 
+    def renderTextLines(self, surface, lines, pos):
+        font = pg.font.Font(None, 14)
+        for indent, color, line in lines:
+            if color is None:
+                color = (192, 192, 192)
+            if line is None:
+                line = '???'
+            ts = font.render(line, 1, color)
+            surface.blit(ts, pos + indent * np.array((12, 0)))
+            pos += (0, ts.get_height() * 1.1)
+        return pos
+
     def renderInfoPanel(self, vp):
         size = vec(200, vp.size[1] - 200)
         if self.infoPanelInfo is None:
@@ -646,16 +691,10 @@ class Game:
 
         text.append((0, None, '%d other %s.' % (self.objects.cardinality, 'bodies' if self.objects.cardinality != 1 else 'body')))
 
-        font = pg.font.Font(None, 14)
         pos = np.zeros(2) + (2, 2)
-        for indent, color, t in text:
-            if color is None:
-                color = (192, 192, 192)
-            if t is None:
-                t = '???'
-            ts = font.render(t, 1, color)
-            panel.blit(ts, pos + indent * np.array((12, 0)))
-            pos += (0, ts.get_height() * 1.1)
+
+        pos = self.renderTextLines(panel, text, pos)
+        self.renderTextLines(panel, [(0, None, 'Cargo:')] + self.objects.gamestate[0].briefInventory(), pos + (0, 20))
 
         pg.draw.rect(panel, (0, 128, 0), Rect((0, 0), size), 1)
         return panel
@@ -684,19 +723,23 @@ class Game:
             m.step()
             if m.lifetime is not None and m.lifetime <= 0:
                 self.objects.active[i] = False
+                self.objects.gamestate[i] = None
                 continue
             if m.incomingCollision is not None:
-                if m.incomingCollision >= self.objects.cardinality:
+                if m.incomingCollision.index >= self.objects.cardinality:
                     pass # oops
                 else:
-                    self.weaponHit(self.objects.gamestate[m.incomingCollision].sourceWeapon, m, i)
-                    self.objects.active[m.incomingCollision] = False
-                    m.incomingCollision = None
+                    if self.objects.active[m.incomingCollision.index]:
+                        self.weaponHit(self.objects.gamestate[m.incomingCollision.index].sourceWeapon, m, i)
+                        self.objects.active[m.incomingCollision.index] = False
+                m.incomingCollision = None
             if m.sprite is not None:
-                sprite = pg.transform.rotate(m.sprite, self.objects.theta[i])
-                swidth, sheight = sprite.get_size()
+                swidth, sheight = m.sprite.get_size()
                 x, y = (self.objects.p[i][0] - swidth / 2, self.objects.p[i][1] - sheight / 2) - self.ui.vp.pos
-                if x > 0 and y > 0 and np.any((x, y) < self.ui.vp.size):
+                if x > -swidth and y > -sheight and np.any((x, y) < self.ui.vp.size):
+                    sprite = pg.transform.rotate(m.sprite, self.objects.theta[i])
+                    swidth, sheight = sprite.get_size()
+                    x, y = (self.objects.p[i][0] - swidth / 2, self.objects.p[i][1] - sheight / 2) - self.ui.vp.pos
                     cx, cy = x + swidth / 2, y + sheight / 2
                     try:
                         for weapon in m.weapons:
@@ -710,7 +753,7 @@ class Game:
                                 elif weapon.type == 'target-beam' and m.target is not None:
                                     weapon.firing = False
                                     start = np.array((cx, cy))
-                                    end = (self.objects.p[m.target.index] + (np.random.random(2) - 0.5) * 5) - self.ui.vp.pos
+                                    end = (self.objects.p[m.target.index] + (np.random.random(2) - 0.5) * weapon.spread) - self.ui.vp.pos
                                     pg.draw.line(surface, weapon.color, start, end, 5)
                     except AttributeError:
                         pass
@@ -721,43 +764,37 @@ class Game:
                         p = np.array((cx, cy))
                         size = np.array((m.hitRadius, m.hitRadius))
                         p -= size / 2
-                        pg.draw.lines(surface, (0, 255, 0), False, [p + (0, 10), p, p + (10, 0)])
+                        legSize = 10
+                        if m.hitRadius < legSize * 3:
+                            legSize = max(2, m.hitRadius / 3)
+                        pg.draw.lines(surface, (0, 255, 0), False, [p + (0, legSize), p, p + (legSize, 0)])
                         p2 = p + size * (0, 1)
-                        pg.draw.lines(surface, (0, 255, 0), False, [p2 - (0, 10), p2, p2 + (10, 0)])
+                        pg.draw.lines(surface, (0, 255, 0), False, [p2 - (0, legSize), p2, p2 + (legSize, 0)])
                         p3 = p + size * (1, 0)
-                        pg.draw.lines(surface, (0, 255, 0), False, [p3 + (0, 10), p3, p3 - (10, 0)])
+                        pg.draw.lines(surface, (0, 255, 0), False, [p3 + (0, legSize), p3, p3 - (legSize, 0)])
                         p4 = p + size
-                        pg.draw.lines(surface, (0, 255, 0), False, [p4 - (0, 10), p4, p4 - (10, 0)])
+                        pg.draw.lines(surface, (0, 255, 0), False, [p4 - (0, legSize), p4, p4 - (legSize, 0)])
 
                     # pg.draw.line(surface, (255, 255, 255), (cx, cy), (cx + self.objects.ddp[i][0], cy + self.objects.ddp[i][1]))
                     if not self.objects.canCollide[i]:
-                        if m.shieldCharge < m.shieldCapacity and m.shieldCharge > 0:
+                        if hasattr(m, 'shieldCharge') and m.shieldCharge < m.shieldCapacity and m.shieldCharge > 0:
                             cp = np.array([cx, cy])
                             length = 30 * (float(m.shieldCharge) / m.shieldCapacity)
                             pg.draw.line(surface, (128, 128, 255), cp - (15, -10), cp - (15 - length, -10), 3)
-                        if (m.hullIntegrity < m.hullCapacity or m.shieldCharge < m.shieldCapacity) and m.hullIntegrity > 0:
+                        if (m.hp < m.maxhp or (hasattr(m, 'shieldCharge') and m.shieldCharge < m.shieldCapacity)) and m.hp > 0:
                             cp = np.array([cx, cy])
-                            length = 30 * (float(m.hullIntegrity) / m.hullCapacity)
+                            length = 30 * (float(m.hp) / m.maxhp)
                             pg.draw.line(surface, (128, 255, 128), cp - (15, -14), cp - (15 - length, -14), 3)
-                        if m.energy < m.energyCapacity and m.energy > 0:
+                        if hasattr(m, 'energy') and m.energy < m.energyCapacity and m.energy > 0:
                             cp = np.array([cx, cy])
                             length = 30 * (float(m.energy) / m.energyCapacity)
                             pg.draw.line(surface, (255, 255, 128), cp - (15, -18), cp - (15 - length, -18), 3)
 
-        for i, m in enumerate(self.objects.gamestate):
-            try:
-                if m.annotation is None:
-                    continue
-                text = m.annotation
-                x = self.objects.p[i][0] - swidth / 2 - vp.x
-                y = self.objects.p[i][1] - sheight / 2 - vp.y
-                cx = x + swidth / 2
-                cy = y + sheight / 2
-                font = pg.font.Font(None, 16)
-                ts = font.render(text, 1, (255, 0, 0, 255))
-                surface.blit(ts, (cx, cy))
-            except AttributeError:
-                pass
+                    if m.annotation is not None:
+                        text = m.annotation
+                        font = pg.font.Font(None, 16)
+                        ts = font.render(text, 1, (255, 0, 0, 255))
+                        surface.blit(ts, (cx, cy))
 
         self.ui.statusBar.topText = '({x:04.4f}, {y:04.4f}) ({xv:04.4f}, {yv:04.4f})[{speed:04.4f}] ({xa:04.4f}, {ya:04.4f})'.format(
             x=self.objects.p[0][0],
@@ -789,6 +826,7 @@ class Game:
             self.infoPanel.blit(self.minimap, self.minimapPos)
             self.infoPanel.blit(self.infoPanelInfo, (0, 200))
 
+        pg.draw.rect(self.mainPanel, (0, 128, 0), Rect((0, 0), self.mainPanel.get_size()), 1)
         self.screen.blit(self.mainPanel, (200, 0))
         self.screen.blit(self.infoPanel, (0, 0))
 
@@ -798,16 +836,28 @@ class Game:
         #     self.objects.ddp *= 0
 
         storage.save('objects', self.objects.serialize())
-        storage.save('current-sector', tuple(self.currentSector.pos))
+        storage.save('current-sector', self.currentSector.pos.tolist())
         storage.commit()
 
     def loadState(self, storage):
         storage.connect()
         objects = storage.load('objects')
         if objects is not None:
-            self.objects = objects.deserialize(ships.get)
+            self.objects.deserialize(objects, ships.get)
         self.loadSector(sectors.getByPosition(storage.load('current-sector', (0, 0))))
         self.ui.playerShip = self.getMobileController(0)
+
+    def mine(self, src, weapon):
+        if self.objects.gamestate[src].target is not None:
+            target = self.objects.gamestate[self.objects.gamestate[src].target.index]
+            mined = stats.multivariateHypergeometricSample(target.ore.items(), 100 / target.mass)
+
+            total = 0
+            for k, v in mined:
+                total += v
+                target.ore[k] -= v
+            target.mass -= total * target.mass
+            self.objects.gamestate[src].addInventory(((k, v * target.mass) for k, v in mined))
 
     def tractor(self, src, weapon):
         if self.objects.gamestate[src].target is not None:
@@ -829,15 +879,16 @@ class Game:
         distance = np.sum(v * (self.objects.p - self.objects.p[src]), axis=1)
         beamDistance = np.abs(np.sum(vperp * (self.objects.p - self.objects.p[src]), axis=1))
         for i, value in enumerate(beamDistance):
-            if self.objects.gamestate[i].hitRadius > 0 and distance[i] > 0 and distance[i] < weapon.lifetime and value < 20:
+            hitradius = self.objects.gamestate[i].hitRadius
+            if hitradius > 0 and distance[i] > 0 and distance[i] < weapon.lifetime and value < hitradius:
                 self.weaponHit(weapon, self.objects.gamestate[i], i)
                 # self.objects.gamestate[i].annotation = 'BOOM! (%f)' % distance[i]
             # else:
             #     self.objects.gamestate[i].annotation = None
 
     def weaponHit(self, weapon, mobile, i):
-        damage = weapon.energyPerShot * 2
-        if mobile.shieldCharge > 0:
+        damage = weapon.energyPerShot * 0.80
+        if hasattr(mobile, 'shieldCharge') and mobile.shieldCharge > 0:
             if mobile.shieldCharge > damage:
                 # print 'damage shield'
                 mobile.shieldCharge -= damage
@@ -847,23 +898,25 @@ class Game:
                 damage -= mobile.shieldCharge
                 mobile.shieldCharge = 0
 
-        if mobile.hullIntegrity < 1:
+        if mobile.hp < 1:
             self.objects.active[i] = False
             return
 
         if damage > 0:
-            if mobile.hullIntegrity > damage:
+            if mobile.hp > damage:
                 # print 'damage hull'
-                mobile.hullIntegrity -= damage
+                mobile.hp -= damage
             else:
                 # print 'hull breach'
-                mobile.hullIntegrity = 0
+                mobile.hp = 0
                 self.blowUp(i)
                 # destroy
 
     def blowUp(self, src):
         self.objects.active[src] = False
-        n = int(round(10 + random() * 10))
+        # self.objects.gamestate[src].incomingCollision = None
+        magnitude = min(self.objects.gamestate[src].mass / 100, 10)
+        n = int(round(2 + random() * magnitude))
         i = self.objects.add(n, Debris)
         self.objects.p[i:i+n] = self.objects.p[src] + (10 * np.random.random((n, 2)) - 0.5)
         self.objects.dp[i:i+n] = self.objects.dp[src] + 20 * np.random.random((n, 2)) - 10
@@ -936,7 +989,10 @@ class MobileController:
                 elif w.type == 'target-beam':
                     w.lastFired = tick
                     w.firing = True
-                    self.game.tractor(0, w)
+                    if w.name == 'Tractor Beam':
+                        self.game.tractor(0, w)
+                    elif w.name == 'Mining Laser':
+                        self.game.mine(0, w)
                 elif w.type == 'projectile':
                     w.lastFired = tick
                     i = self.objects.add(1, w.projectile)
@@ -1019,6 +1075,7 @@ class MobileController:
             self.objects.ddtheta[self.index] = rate * direction * 40 * self.objects.gamestate[self.index].turnRate / self.objects.gamestate[self.index].mass
 
     def nearestTarget(self):
+        # TODO exclude junk/projectiles
         dp = self.objects.p - self.objects.p[self.index]
         dp = np.sum(dp * dp, axis=1)
         s = sorted(enumerate(dp), key=lambda t: t[1])
@@ -1035,31 +1092,6 @@ class MobileController:
         self.objects.ddp[self.index] = 0
         self.objects.ddtheta[self.index] = 0
 
-class PickleStorage:
-    def __init__(self):
-        self.data = {}
-        pass
-
-    def save(self, name, what):
-        self.data[name] = what
-
-    def load(self, name, default = None):
-        try:
-            return self.data[name]
-        except KeyError:
-            return default
-
-    def connect(self):
-        try:
-            with open('world-state.pkl', 'r') as file:
-                self.data = pickle.load(file)
-        except IOError:
-            self.data = {}
-
-    def commit(self):
-        with open('world-state.pkl', 'w') as file:
-            pickle.dump(self.data, file)
-
 def startGame():
     pg.init()
 
@@ -1075,7 +1107,7 @@ def startGame():
     # enemyShip = game.getMobileController(1)
     # enemyAI = enemy.AI(enemyShip, 0)
 
-    # game.loadState(PickleStorage())
+    game.loadState(storage.YAMLStorage())
 
     frame = 0
     tick = 0
@@ -1120,7 +1152,7 @@ def startGame():
         if ui.mode == 'game':
             pg.display.flip()
 
-    # game.saveState(PickleStorage())
+    game.saveState(storage.YAMLStorage())
 
 
 

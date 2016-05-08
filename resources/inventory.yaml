@@ -22,6 +22,12 @@ railgun:
   mass: 100
   space: 5
   value: 500
+mining-laser:
+  name: Mining Laser
+  desc: Cheap, effective, but requires hauling ammo around.
+  mass: 100
+  space: 5
+  value: 500
 railgun-ammo:
   name: Railgun Ammo
   desc:
@@ -46,7 +52,18 @@ escape-pod:
   mass: 20
   space: 10
   value: 3000
-
+iron-ore:
+  name: iron ore
+  desc: Iron and oxides of iron, bound in a rock matrix.
+  space: 5
+  mass: 5
+  value: 10
+water:
+  name: water
+  desc: H20
+  mass: 1
+  space: 1
+  value: 10
 # thing:
 #   name:
 #   desc:

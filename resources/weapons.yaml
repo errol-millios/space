@@ -1,0 +1,31 @@
+laser:
+  type: beam
+  color: [192, 0, 0, 192]
+  lifetime: 1000
+  spread: 0
+  energy: 10
+tractor:
+  type: target-beam
+  color: [0, 255, 0, 192]
+  lifetime: 1000
+  spread: 5
+  energy: 10
+plasma:
+  type: projectile
+  sprite: [[10, 2], [0, 128, 255, 192]]
+  interval: 3
+  lifetime: 20
+  spread: 10
+  energy: 20
+railgun:
+  type: projectile
+  sprite: [[2, 2], [192, 192, 192, 192]]
+  interval: 3
+  lifetime: 1000
+  spread: 7
+  energy: 20
+mining-laser:
+  type: target-beam
+  color: [128, 0, 192, 192]
+  spread: 2
+  energy: 5

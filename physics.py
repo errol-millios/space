@@ -66,6 +66,11 @@ class PhysicalObjects:
     def compact(self):
         before = self.active.shape[0]
 
+        if self.cardinality > 500:
+            for i, a in enumerate(self.gamestate):
+                if self.gamestate[i].fluff:
+                    self.active[i] = False
+
         newGamestate = []
         indexOffset = 0
         for i, a in enumerate(self.active):
@@ -110,29 +115,34 @@ class PhysicalObjects:
                 serialized.active[i] = False
         serialized.compact()
 
-        serialized.p = map(list, serialized.p)
-        serialized.dp = map(list, serialized.dp)
-        serialized.ddp = map(list, serialized.ddp)
-        serialized.mass = map(float, serialized.mass)
-        serialized.theta = map(float, serialized.theta)
-        serialized.dtheta = map(float, serialized.dtheta)
-        serialized.ddtheta = map(float, serialized.ddtheta)
-        serialized.active = map(bool, serialized.active)
-        serialized.canCollide = map(bool, serialized.canCollide)
-        return serialized
+        return [
+            serialized.cardinality,
+            serialized.active.tolist(),
+            serialized.canCollide.tolist(),
+            serialized.p.tolist(),
+            serialized.dp.tolist(),
+            serialized.ddp.tolist(),
+            serialized.mass.tolist(),
+            serialized.theta.tolist(),
+            serialized.dtheta.tolist(),
+            serialized.ddtheta.tolist(),
+            serialized.gamestate
+        ]
 
-    def deserialize(self, gamestateDeserializer):
-        self.gamestate = map(gamestateDeserializer, self.gamestate)
-        self.p = np.array(self.p)
-        self.dp = np.array(self.dp)
-        self.ddp = np.array(self.ddp)
-        self.mass = np.array(self.mass)
-        self.theta = np.array(self.theta)
-        self.dtheta = np.array(self.dtheta)
-        self.ddtheta = np.array(self.ddtheta)
-        self.active = np.array(self.active)
-        self.canCollide = np.array(self.canCollide)
-        return self
+    def deserialize(self, state, gamestateDeserializer):
+        self.cardinality = state[0]
+        self.active = np.array(state[1])
+        self.canCollide = np.array(state[2])
+        self.p = np.array(state[3])
+        self.dp = np.array(state[4])
+        self.ddp = np.array(state[5])
+        self.mass = np.array(state[6])
+        self.theta = np.array(state[7])
+        self.dtheta = np.array(state[8])
+        self.ddtheta = np.array(state[9])
+        self.gamestate = map(gamestateDeserializer, state[10])
+
+        self.dim = (self.cardinality, 2)
 
 class FixedPhysicalObjects:
     def __init__(self, n, gamestateConstructor = None):

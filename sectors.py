@@ -21,11 +21,11 @@ class Sector:
 def emptySector(pos):
     return Sector(None, pos, [])
 
-scale = 20000
-
+scale = None
 _sectors = None
 with open('resources/sectors.yaml', 'r') as file:
-    _sectors = yaml.load(file.read())
+    data = yaml.load(file.read())
+    scale, _sectors = data['scale'], data['sectors']
 
 _positionIndex = {tuple(s[1]['pos']): s[1] for s in _sectors.iteritems()}
 

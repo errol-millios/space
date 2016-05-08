@@ -1,18 +1,18 @@
 shuttle:
   sprite: [expect-ago-manufacturing, 40, 90]
   color: [192, 208, 208]
-  mass: 200
+  mass: 120
   hitRadius: 40
 freighter:
   sprite: [bee-modern-older, 128, 90]
   color: [40, 20, 0]
   thrust: 1.5
-  mass: 120
+  mass: 400
   hitRadius: 128
 fighter:
   sprite: [source-forth-eight, 64, 270]
   color: [192, 192, 192]
-  weapons: [railgun, railgun, railgun, railgun]
+  weapons: [mining-laser]
   turnRate: 1.5
   thrust: 1.5
   mass: 112
@@ -26,7 +26,7 @@ bomber:
   mass: 112
   hitRadius: 80
 escape-pod:
-  sprite: [_rect, 10, 5]
+  sprite: [_rect, 12, 5]
   color: [255, 255, 96]
   turnRate: 0.1
   thrust: 0.05
